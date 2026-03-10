@@ -126,15 +126,16 @@
     <script>
         // The Winding Map Coordinates (X%, Y%) - Bottom to Top progression
         const levels = [
-            { id: 0, name: "Ghost Signal", x: 20, y: 95, hash: "9516ca4d0b4353b3d4f5b5b0451eeb226d40578b9b46f522f180f6da86f3dbd9" },
-            { id: 1, name: "The Manifest", x: 70, y: 85, hash: "9212c1b2f0c76ca4a2cd3ec44dcf49b389edfc0b9c3f50dd707b6100ca4164b7" },
-            { id: 2, name: "Default Creds", x: 30, y: 70, hash: "04746618e7d23d91cf9fdbfcfc141d8e1329aee5e970b5b2db0a8e1abecbfb4d" },
-            { id: 3, name: "Dead Reckoning", x: 80, y: 55, hash: "64344eab8ab664ef55e16b9b392a11b61cbb27a85871324707834fc09d4375ff" },
-            { id: 4, name: "Heartbleed Echo", x: 20, y: 40, hash: "f3c2b8c5a4b494d4559591e0a2fde69d7240c5b36bbdc37bdf3da416a9a7a6c9" },
-            { id: 5, name: "Phantom Freq", x: 60, y: 25, hash: "18ff3eb7d8ebce54805e608f02f9048c21966a01dd3a62376dc86214edc4ebf1" },
-            { id: 6, name: "SSRF Relay", x: 30, y: 12, hash: "c3e982ecdd029a1e0410ebcfffa2abcc1ad30303e040f3408a0d7d7b140640f0" },
-            { id: 7, name: "Kill Switch", x: 50, y: 2, hash: "b5c1f0d3b6f2022d1921c32085ce3be293f0b064c2d43e5c94d0c1e879a834e5" }
+            { id: 0, name: "Ghost Signal", hash: "af2392f2e2af88f99e438fe9019692ded2fb82bca97cc0bb72989e0d6d82c684" },
+            { id: 1, name: "The Manifest", hash: "d8ee194d5a220576c8338d16d6bd4e79d93cd58d0c226a6526e492b9fad9fc5d" },
+            { id: 2, name: "Default Creds", hash: "003d761cc512d4c97d21daf55b42bd3822a7351acac10be1ffba93362de26bd5" },
+            { id: 3, name: "Dead Reckoning", hash: "16e58b8afc0078a35ff10133e24d7c8d3cd05c86a797401c0f45562560d0b762" },
+            { id: 4, name: "Heartbleed Echo", hash: "ae894a02dc6ea6e30e7c8d44eb31b1a5d6aaea8e2df3dc61dbc617f73fdf8d92" },
+            { id: 5, name: "Phantom Freq", hash: "400db21a612b6a3e7c78f38abc73ddd71a74007f4423ae77afef5215bc897c7c" },
+            { id: 6, name: "SSRF Relay", hash: "6991fbe71ea2687b35bb47c6d65516d8f8371f810eda4431c47761a9db6f31a8" },
+            { id: 7, name: "Kill Switch", hash: "5acd9ec1622ec0e82db2305fe1d3892a2a080551d2471d1bab1a49aa5bd90c02" },
         ];
+
 
         let activeNodeId = null;
         let solvedNodes = JSON.parse(localStorage.getItem('ironBirdProgress')) || [];
