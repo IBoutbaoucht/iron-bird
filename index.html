@@ -1,361 +1,729 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IRON BIRD // C2 OVERRIDE</title>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
-    
-    <style>
-        :root {
-            --bg-color: #030613;
-            --pcb-color: #0a1128;
-            --locked: #ff003c;
-            --active: #00f3ff;
-            --solved: #39ff14;
-            --chip-bg: #111;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IRON BIRD // CTF TRACKER</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Fira+Code:wght@400;600&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #eef2f7;
+  --paper: #f8fafc;
+  --ink: #1a2332;
+  --ink-light: #4a5568;
+  --locked: #c8d4e0;
+  --locked-border: #a0b0c0;
+  --active: #2563eb;
+  --active-glow: rgba(37,99,235,0.3);
+  --solved: #059669;
+  --solved-glow: rgba(5,150,105,0.3);
+  --path-solved: #10b981;
+  --path-locked: #c5d3de;
+  --gold: #f59e0b;
+  --danger: #ef4444;
+}
 
-        body, html {
-            margin: 0; padding: 0; height: 100%;
-            background-color: var(--bg-color);
-            background-image: 
-                linear-gradient(rgba(0, 243, 255, 0.05) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 243, 255, 0.05) 1px, transparent 1px);
-            background-size: 40px 40px;
-            font-family: 'Fira Code', monospace;
-            color: var(--active);
-            overflow-x: hidden;
-        }
+* { margin:0; padding:0; box-sizing:border-box; }
 
-        #header {
-            text-align: center; padding: 25px;
-            background: rgba(3, 6, 19, 0.95);
-            border-bottom: 2px solid var(--active);
-            box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
-            position: fixed; width: 100%; top: 0; z-index: 100;
-        }
+body {
+  font-family: 'Syne', sans-serif;
+  background: var(--bg);
+  background-image:
+    linear-gradient(rgba(37,99,235,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37,99,235,0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
 
-        h1 { 
-            margin: 0; font-family: 'Orbitron', sans-serif; 
-            font-size: 32px; letter-spacing: 5px; text-shadow: 0 0 15px var(--active); 
-        }
-        
-        #score-display { 
-            color: var(--solved); font-size: 18px; margin-top: 10px; font-weight: bold;
-            text-shadow: 0 0 10px var(--solved);
-        }
+/* ─── HEADER ─── */
+#header {
+  position: fixed; top:0; left:0; right:0; z-index:200;
+  display: flex; align-items:center; justify-content:space-between;
+  padding: 14px 32px;
+  background: rgba(248,250,252,0.92);
+  border-bottom: 2px solid rgba(37,99,235,0.15);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 20px rgba(0,0,0,0.06);
+}
 
-        /* The Map Area & ESP32 Design */
-        #map-container {
-            position: relative;
-            width: 100%; max-width: 900px; height: 1300px;
-            margin: 140px auto 50px auto;
-        }
+#header h1 {
+  font-size: 22px; letter-spacing: 3px; color: var(--ink);
+  display: flex; align-items:center; gap:10px;
+}
+#header h1 span { color: var(--active); }
 
-        /* The ESP32 Chip Graphic built with CSS */
-        .esp32-chip {
-            position: absolute;
-            top: 10%; left: 20%; right: 20%; bottom: 10%;
-            background: var(--chip-bg);
-            border: 4px solid #333;
-            border-radius: 10px;
-            box-shadow: inset 0 0 50px #000, 0 0 30px rgba(0,0,0,0.8);
-            z-index: 0;
-        }
-        
-        .esp32-antenna {
-            position: absolute;
-            top: 2%; left: 35%; right: 35%; height: 8%;
-            background: repeating-linear-gradient( 45deg, transparent, transparent 10px, #bda25c 10px, #bda25c 20px );
-            border: 2px solid #bda25c;
-            z-index: 0;
-        }
+.score-pill {
+  font-family: 'Fira Code', monospace;
+  font-size: 13px; color: var(--solved);
+  background: rgba(5,150,105,0.1);
+  border: 1.5px solid rgba(5,150,105,0.3);
+  padding: 6px 16px; border-radius: 20px; font-weight:600;
+}
 
-        /* SVG for drawing the connecting data traces */
-        #data-traces {
-            position: absolute; top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 1; pointer-events: none;
-        }
+.reset-btn {
+  font-family: 'Fira Code', monospace; font-size: 11px;
+  color: var(--ink-light); background: transparent;
+  border: 1.5px dashed var(--locked-border);
+  padding: 5px 12px; border-radius: 4px; cursor: pointer;
+  transition: 0.2s;
+}
+.reset-btn:hover { border-color: var(--danger); color: var(--danger); }
 
-        /* The Nodes */
-        .node {
-            position: absolute;
-            width: 65px; height: 65px;
-            background: var(--pcb-color);
-            border: 3px solid var(--locked);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            display: flex; justify-content: center; align-items: center;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 22px; font-weight: 900; color: var(--locked);
-            cursor: pointer; z-index: 10;
-            box-shadow: 0 0 15px rgba(255, 0, 60, 0.4);
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-        }
+/* ─── MAP WRAPPER ─── */
+#scroll-wrapper {
+  padding-top: 80px;
+  display: flex; justify-content: center;
+}
 
-        .node-label {
-            position: absolute; top: 115%; width: 160px;
-            text-align: center; font-size: 14px; font-weight: bold;
-            background: rgba(0,0,0,0.8); padding: 4px; border-radius: 4px;
-            pointer-events: none;
-        }
+#map-stage {
+  position: relative;
+  width: 700px;
+  height: 1600px;
+  margin: 20px 0 60px;
+}
 
-        .node:hover { transform: translate(-50%, -50%) scale(1.15); }
-        .node.locked { opacity: 0.5; cursor: not-allowed; border-color: #444; color: #444; box-shadow: none; }
-        .node.locked .node-label { color: #555; }
-        
-        /* Active Node Pulse Animation */
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(0, 243, 255, 0.7); }
-            70% { box-shadow: 0 0 0 20px rgba(0, 243, 255, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(0, 243, 255, 0); }
-        }
+/* ─── SVG LAYER ─── */
+#path-svg {
+  position: absolute; top:0; left:0;
+  width: 100%; height: 100%;
+  pointer-events: none; z-index: 1;
+}
 
-        .node.active { 
-            border-color: var(--active); color: var(--active); 
-            box-shadow: 0 0 20px var(--active);
-            animation: pulse 2s infinite;
-        }
-        .node.active .node-label { color: var(--active); text-shadow: 0 0 5px var(--active); }
+/* Animated dash for locked segments */
+@keyframes dashMove {
+  to { stroke-dashoffset: -30; }
+}
 
-        .node.solved { 
-            border-color: var(--solved); color: var(--solved); 
-            box-shadow: 0 0 25px rgba(57, 255, 20, 0.6), inset 0 0 10px rgba(57, 255, 20, 0.4);
-            background: rgba(57, 255, 20, 0.05);
-        }
-        .node.solved .node-label { color: var(--solved); }
+.seg-locked {
+  stroke: var(--path-locked);
+  stroke-width: 5;
+  stroke-dasharray: 10 8;
+  fill: none;
+  stroke-linecap: round;
+  animation: dashMove 1.5s linear infinite;
+}
 
-        /* Terminal Modal */
-        #terminal-modal {
-            display: none; position: fixed;
-            top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 90%; max-width: 600px;
-            background: rgba(5, 10, 25, 0.95); border: 2px solid var(--active);
-            padding: 30px; z-index: 1000;
-            box-shadow: 0 0 40px rgba(0, 243, 255, 0.3);
-            backdrop-filter: blur(5px);
-        }
+.seg-solved {
+  stroke: var(--path-solved);
+  stroke-width: 6;
+  fill: none;
+  stroke-linecap: round;
+}
 
-        #modal-overlay {
-            display: none; position: fixed; top: 0; left: 0;
-            width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 999;
-        }
+/* The glowing travel particle */
+.travel-particle {
+  fill: #fff;
+  filter: drop-shadow(0 0 6px var(--active)) drop-shadow(0 0 12px var(--active));
+}
 
-        .term-header { 
-            font-family: 'Orbitron', sans-serif; font-size: 22px; 
-            margin-bottom: 20px; border-bottom: 1px dashed var(--active); padding-bottom: 10px; 
-        }
-        
-        .term-input { 
-            width: 100%; background: rgba(0,0,0,0.5); border: 1px solid #555;
-            color: #fff; padding: 15px; font-family: 'Fira Code', monospace; font-size: 16px;
-            box-sizing: border-box; margin-bottom: 20px; outline: none; transition: 0.3s;
-        }
-        .term-input:focus { border-color: var(--active); box-shadow: inset 0 0 10px rgba(0,243,255,0.2); }
-        
-        .btn {
-            background: transparent; border: 2px solid var(--active); color: var(--active);
-            padding: 10px 20px; cursor: pointer; font-family: 'Orbitron', sans-serif; font-weight: bold;
-            font-size: 16px; transition: 0.2s; margin-right: 10px;
-        }
-        .btn:hover { background: var(--active); color: #000; box-shadow: 0 0 15px var(--active); }
-        .btn.abort { border-color: var(--locked); color: var(--locked); }
-        .btn.abort:hover { background: var(--locked); color: #000; box-shadow: 0 0 15px var(--locked); }
-        
-        #term-status { margin-top: 20px; height: 24px; font-weight: bold; font-size: 16px; }
-        .err { color: var(--locked); text-shadow: 0 0 5px var(--locked); }
-        .ok { color: var(--solved); text-shadow: 0 0 5px var(--solved); }
-        .sys { color: #fff; }
+/* ─── BACKGROUND DECO ─── */
+.deco {
+  position: absolute; pointer-events: none; z-index: 0;
+  opacity: 0.12;
+}
 
-    </style>
+/* ─── NODES ─── */
+.node-wrap {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  cursor: pointer;
+}
+
+.node-ring {
+  width: 72px; height: 72px; border-radius: 50%;
+  display: flex; align-items:center; justify-content:center;
+  font-size: 20px; font-weight: 800;
+  transition: transform 0.25s ease, box-shadow 0.3s;
+  position: relative;
+}
+
+.node-wrap:hover .node-ring { transform: scale(1.12); }
+.node-wrap.locked { cursor: not-allowed; }
+.node-wrap.locked:hover .node-ring { transform: scale(1); }
+
+.node-ring.locked {
+  background: #dde5ee;
+  border: 4px solid var(--locked-border);
+  color: #8fa0b4;
+}
+
+@keyframes pulseBlue {
+  0%,100% { box-shadow: 0 0 0 0 var(--active-glow), 0 4px 15px rgba(37,99,235,0.2); }
+  50%      { box-shadow: 0 0 0 16px rgba(37,99,235,0), 0 4px 15px rgba(37,99,235,0.3); }
+}
+.node-ring.active {
+  background: #fff;
+  border: 5px solid var(--active);
+  color: var(--active);
+  animation: pulseBlue 2s ease-in-out infinite;
+}
+
+@keyframes pulseSolved {
+  0%,100% { box-shadow: 0 0 0 0 var(--solved-glow), 0 6px 20px rgba(5,150,105,0.25); }
+  50%      { box-shadow: 0 0 0 14px rgba(5,150,105,0), 0 6px 20px rgba(5,150,105,0.3); }
+}
+.node-ring.solved {
+  background: linear-gradient(135deg, #10b981, #059669);
+  border: 4px solid #34d399;
+  color: white;
+  animation: pulseSolved 2.5s ease-in-out infinite;
+}
+
+/* Checkmark pop animation */
+@keyframes popIn {
+  0%   { transform: scale(0) rotate(-20deg); opacity:0; }
+  60%  { transform: scale(1.3) rotate(5deg); }
+  100% { transform: scale(1) rotate(0deg); opacity:1; }
+}
+.node-ring.solved .node-icon { animation: popIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275) both; }
+
+.node-label {
+  position: absolute;
+  white-space: nowrap;
+  top: 80px;
+  left: 50%; transform: translateX(-50%);
+  font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
+  color: var(--ink);
+  background: rgba(248,250,252,0.9);
+  padding: 4px 10px; border-radius: 4px;
+  border: 1.5px solid rgba(0,0,0,0.07);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  pointer-events: none;
+}
+
+.node-label.locked { color: var(--locked-border); }
+.node-label.solved { color: var(--solved); border-color: rgba(5,150,105,0.3); }
+.node-label.active { color: var(--active); border-color: rgba(37,99,235,0.3); }
+
+/* Node index badge */
+.node-badge {
+  position: absolute; top:-10px; right:-10px;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--ink); color: white;
+  font-size: 10px; font-weight: 700;
+  display: flex; align-items:center; justify-content:center;
+  font-family: 'Fira Code', monospace;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* ─── STICKY NOTE ─── */
+.sticky {
+  position: fixed; right: 28px; top: 110px; z-index: 150;
+  width: 200px;
+  background: #fef3c7;
+  padding: 18px 16px 14px;
+  box-shadow: 3px 5px 14px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.06);
+  transform: rotate(2.5deg);
+  border-radius: 3px 12px 3px 12px;
+  font-family: 'Kalam', cursive;
+}
+.sticky::before {
+  content:''; position:absolute; top:-12px; left:50%; transform:translateX(-50%);
+  width:42px; height:18px;
+  background: rgba(239,68,68,0.55);
+  border-radius: 2px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
+.sticky h3 { font-size:13px; margin-bottom:10px; color:#92400e; }
+.sticky .field { margin-bottom:8px; font-size:11px; color:#78350f; }
+.sticky .val {
+  font-family: 'Fira Code', monospace; font-size:12px;
+  color: #dc2626; display:block; margin-top:2px;
+  word-break:break-all;
+}
+.sticky .note { font-size:10px; color:#a16207; font-style:italic; }
+
+/* ─── MODAL ─── */
+#overlay {
+  display:none; position:fixed; inset:0; z-index:900;
+  background: rgba(15,23,42,0.55);
+  backdrop-filter: blur(6px);
+}
+
+#modal {
+  display:none; position:fixed; z-index:1000;
+  top:50%; left:50%; transform:translate(-50%,-55%);
+  width: min(500px, 92vw);
+  background: var(--paper);
+  border: 2.5px solid var(--ink);
+  border-radius: 10px;
+  padding: 32px;
+  box-shadow: 12px 12px 0 rgba(0,0,0,0.08);
+  transition: transform 0.3s cubic-bezier(0.175,0.885,0.32,1.275), opacity 0.2s;
+}
+#modal.open { transform: translate(-50%, -50%); }
+
+.modal-sector {
+  font-family: 'Fira Code', monospace; font-size: 11px; color: var(--ink-light);
+  letter-spacing: 2px; margin-bottom: 6px;
+}
+.modal-title {
+  font-size: 24px; font-weight: 800; color: var(--ink); margin-bottom: 20px;
+  padding-bottom: 14px; border-bottom: 2px dashed #dde5ee;
+}
+.modal-prompt {
+  font-family: 'Fira Code', monospace; font-size: 13px; color: var(--ink-light);
+  margin-bottom: 8px;
+}
+.flag-input {
+  width:100%; background: #f1f5f9; border: 2.5px solid #dde5ee;
+  color: var(--ink); padding: 14px 16px;
+  font-family: 'Fira Code', monospace; font-size: 15px;
+  border-radius: 6px; outline: none; transition: 0.2s;
+  margin-bottom: 16px;
+}
+.flag-input:focus { border-color: var(--active); background: #fff; box-shadow: 0 0 0 3px var(--active-glow); }
+.flag-input:disabled { opacity: 0.5; }
+
+.modal-actions { display:flex; gap:10px; justify-content:flex-end; }
+
+.btn-exec {
+  background: var(--active); color: white; border:none;
+  padding: 12px 24px; border-radius: 6px; cursor:pointer;
+  font-family: 'Syne', sans-serif; font-weight:700; font-size:14px;
+  transition: 0.2s; letter-spacing:1px;
+}
+.btn-exec:hover { background: #1d4ed8; transform: translateY(-2px); box-shadow: 0 4px 12px var(--active-glow); }
+
+.btn-abort {
+  background: transparent; color: var(--ink-light);
+  border: 2px solid #dde5ee; padding: 12px 20px; border-radius: 6px;
+  cursor:pointer; font-family: 'Syne', sans-serif; font-weight:700; font-size:14px;
+  transition: 0.2s;
+}
+.btn-abort:hover { background: #f1f5f9; border-color: #b0bec5; }
+
+.modal-status {
+  margin-top: 16px; height: 22px;
+  font-family: 'Fira Code', monospace; font-size: 14px; font-weight:600;
+}
+.modal-status .ok { color: var(--solved); }
+.modal-status .err { color: var(--danger); }
+.modal-status .wait { color: var(--ink-light); }
+
+/* ─── TOAST ─── */
+#toast {
+  position:fixed; bottom:40px; left:50%; transform:translateX(-50%) translateY(80px);
+  background: var(--solved); color:white;
+  font-family: 'Fira Code', monospace; font-size: 14px; font-weight:600;
+  padding: 14px 28px; border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(5,150,105,0.4);
+  z-index: 2000; transition: transform 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
+  pointer-events:none; letter-spacing: 1px;
+}
+#toast.show { transform: translateX(-50%) translateY(0); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--locked); border-radius: 3px; }
+</style>
 </head>
 <body>
 
-    <div id="header">
-        <h1>IRON BIRD // C2 OVERRIDE</h1>
-        <div id="score-display">SYSTEM COMPROMISE: <span id="score">0</span>%</div>
-    </div>
+<div id="header">
+  <h1>IRON <span>BIRD</span> // CTF</h1>
+  <div class="score-pill" id="score-pill">SYSTEMS COMPROMISED: 0 / 8</div>
+  <button class="reset-btn" onclick="resetMap()">RESET MAP</button>
+</div>
 
-    <div id="map-container">
-        <div class="esp32-antenna"></div>
-        <div class="esp32-chip"></div>
-        
-        <svg id="data-traces"></svg>
-        </div>
+<div class="sticky">
+  <h3>// MISSION BRIEF</h3>
+  <div class="field">Target AP:
+    <span class="val">IRON_BIRD</span>
+  </div>
+  <div class="field">Passkey:
+    <span class="val">LB0C5TER</span>
+  </div>
+</div>
 
-    <div id="modal-overlay" onclick="closeModal()"></div>
-    <div id="terminal-modal">
-        <div class="term-header" id="modal-title">TARGET SECTOR</div>
-        <p class="sys">> INJECT PAYLOAD HASH:</p>
-        <input type="text" id="flag-input" class="term-input" placeholder="RebicaKick0ff{...}" autocomplete="off" spellcheck="false">
-        <button class="btn" onclick="submitFlag()">[ EXECUTE ]</button>
-        <button class="btn abort" onclick="closeModal()">[ ABORT ]</button>
-        <div id="term-status"></div>
-    </div>
+<div id="scroll-wrapper">
+  <div id="map-stage">
 
-    <script>
-        // Updated with your exact SHA-256 Hashes
-        const levels = [
-            { id: 0, name: "Ghost Signal", hash: "af2392f2e2af88f99e438fe9019692ded2fb82bca97cc0bb72989e0d6d82c684", x: 20, y: 90 },
-            { id: 1, name: "The Manifest", hash: "d8ee194d5a220576c8338d16d6bd4e79d93cd58d0c226a6526e492b9fad9fc5d", x: 80, y: 80 },
-            { id: 2, name: "Default Creds", hash: "003d761cc512d4c97d21daf55b42bd3822a7351acac10be1ffba93362de26bd5", x: 80, y: 60 },
-            { id: 3, name: "Dead Reckoning", hash: "16e58b8afc0078a35ff10133e24d7c8d3cd05c86a797401c0f45562560d0b762", x: 20, y: 50 },
-            { id: 4, name: "Heartbleed Echo", hash: "ae894a02dc6ea6e30e7c8d44eb31b1a5d6aaea8e2df3dc61dbc617f73fdf8d92", x: 20, y: 30 },
-            { id: 5, name: "Phantom Freq", hash: "400db21a612b6a3e7c78f38abc73ddd71a74007f4423ae77afef5215bc897c7c", x: 80, y: 20 },
-            { id: 6, name: "SSRF Relay", hash: "6991fbe71ea2687b35bb47c6d65516d8f8371f810eda4431c47761a9db6f31a8", x: 50, y: 35 },
-            { id: 7, name: "Kill Switch", hash: "5acd9ec1622ec0e82db2305fe1d3892a2a080551d2471d1bab1a49aa5bd90c02", x: 50, y: 5 }
-        ];
+    <!-- BACKGROUND DECORATIONS -->
+    <!-- ESP32 Chip -->
+    <svg class="deco" style="left:60px;top:80px;width:130px;" viewBox="0 0 100 80" stroke="#1a2332" stroke-width="2" fill="none">
+      <rect x="20" y="15" width="60" height="50" rx="4"/>
+      <rect x="30" y="25" width="40" height="30" rx="2"/>
+      <line x1="10" y1="25" x2="20" y2="25"/><line x1="10" y1="33" x2="20" y2="33"/>
+      <line x1="10" y1="41" x2="20" y2="41"/><line x1="10" y1="49" x2="20" y2="49"/>
+      <line x1="80" y1="25" x2="90" y2="25"/><line x1="80" y1="33" x2="90" y2="33"/>
+      <line x1="80" y1="41" x2="90" y2="41"/><line x1="80" y1="49" x2="90" y2="49"/>
+      <line x1="30" y1="15" x2="30" y2="5"/><line x1="42" y1="15" x2="42" y2="5"/>
+      <line x1="54" y1="15" x2="54" y2="5"/><line x1="66" y1="15" x2="66" y2="5"/>
+      <line x1="30" y1="65" x2="30" y2="75"/><line x1="42" y1="65" x2="42" y2="75"/>
+      <line x1="54" y1="65" x2="54" y2="75"/><line x1="66" y1="65" x2="66" y2="75"/>
+      <text x="50" y="44" text-anchor="middle" font-size="7" font-family="Fira Code" fill="#1a2332" stroke="none">ESP32</text>
+    </svg>
 
-        let activeNodeId = null;
-        let solvedNodes = JSON.parse(localStorage.getItem('ironBirdProgress')) || [];
+    <!-- Wi-Fi Signal -->
+    <svg class="deco" style="right:60px;top:280px;width:90px;" viewBox="0 0 80 60" stroke="#1a2332" stroke-width="2.5" fill="none" stroke-linecap="round">
+      <path d="M5,35 Q40,5 75,35"/>
+      <path d="M15,44 Q40,22 65,44"/>
+      <path d="M27,52 Q40,40 53,52"/>
+      <circle cx="40" cy="57" r="4" fill="#1a2332" stroke="none"/>
+    </svg>
 
-        function initMap() {
-            const container = document.getElementById('map-container');
-            const svg = document.getElementById('data-traces');
-            
-            // Clean up old nodes if re-initializing
-            document.querySelectorAll('.node').forEach(e => e.remove());
-            let svgContent = '';
+    <!-- Drone -->
+    <svg class="deco" style="left:40px;top:680px;width:150px;" viewBox="0 0 120 80" stroke="#1a2332" stroke-width="2" fill="none">
+      <rect x="45" y="30" width="30" height="20" rx="4"/>
+      <line x1="45" y1="40" x2="15" y2="40"/><line x1="75" y1="40" x2="105" y2="40"/>
+      <circle cx="12" cy="40" r="8"/><circle cx="108" cy="40" r="8"/>
+      <ellipse cx="12" cy="40" rx="14" ry="5" opacity="0.5"/>
+      <ellipse cx="108" cy="40" rx="14" ry="5" opacity="0.5"/>
+      <line x1="60" y1="50" x2="60" y2="65"/>
+      <line x1="50" y1="65" x2="70" y2="65"/>
+      <circle cx="55" cy="38" r="3"/>
+      <line x1="60" y1="30" x2="60" y2="15"/>
+      <circle cx="60" cy="12" r="4" fill="#1a2332" stroke="none"/>
+    </svg>
 
-            levels.forEach((lvl, index) => {
-                let stateClass = 'locked';
-                if (solvedNodes.includes(lvl.id)) stateClass = 'solved';
-                else if (lvl.id === 0 || solvedNodes.includes(lvl.id - 1)) stateClass = 'active';
+    <!-- Circuit trace -->
+    <svg class="deco" style="right:40px;top:950px;width:120px;" viewBox="0 0 100 100" stroke="#1a2332" stroke-width="2" fill="none">
+      <path d="M10,50 H30 V20 H70 V40 H90"/>
+      <path d="M30,50 V80 H70 V60 H90"/>
+      <circle cx="30" cy="50" r="4" fill="#1a2332" stroke="none"/>
+      <circle cx="70" cy="40" r="4" fill="#1a2332" stroke="none"/>
+      <circle cx="70" cy="60" r="4" fill="#1a2332" stroke="none"/>
+    </svg>
 
-                const node = document.createElement('div');
-                node.className = `node ${stateClass}`;
-                node.id = `node-${lvl.id}`;
-                node.style.left = `${lvl.x}%`;
-                node.style.top = `${lvl.y}%`;
-                node.innerText = `0${lvl.id}`;
-                node.onclick = () => openModal(lvl.id);
-                
-                const label = document.createElement('div');
-                label.className = 'node-label';
-                label.innerText = `[ ${lvl.name.toUpperCase()} ]`;
-                node.appendChild(label);
+    <!-- Lock icon -->
+    <svg class="deco" style="right:80px;top:1250px;width:70px;" viewBox="0 0 60 80" stroke="#1a2332" stroke-width="2.5" fill="none">
+      <rect x="8" y="35" width="44" height="35" rx="6"/>
+      <path d="M18,35 V22 Q18,8 30,8 Q42,8 42,22 V35"/>
+      <circle cx="30" cy="53" r="6"/>
+      <line x1="30" y1="59" x2="30" y2="66"/>
+    </svg>
 
-                container.appendChild(node);
+    <!-- SVG for all paths + particles -->
+    <svg id="path-svg" viewBox="0 0 700 1600" preserveAspectRatio="none">
+      <defs>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="glow-strong">
+          <feGaussianBlur stdDeviation="5" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <!-- Segments drawn by JS -->
+      <g id="segments"></g>
+      <!-- Particle drawn by JS -->
+      <circle id="particle" r="8" class="travel-particle" style="display:none" filter="url(#glow-strong)"/>
+    </svg>
+  </div>
+</div>
 
-                if (index > 0) {
-                    const prev = levels[index - 1];
-                    const isPathSolved = solvedNodes.includes(prev.id);
-                    const strokeColor = isPathSolved ? '#39ff14' : '#ff003c';
-                    const strokeWidth = isPathSolved ? 4 : 2;
-                    const opacity = isPathSolved ? 0.8 : 0.3;
-                    const dash = isPathSolved ? "" : 'stroke-dasharray="10,10"';
-                    
-                    svgContent += `
-                        <line x1="${prev.x}%" y1="${prev.y}%" 
-                              x2="${lvl.x}%" y2="${lvl.y}%" 
-                              stroke="${strokeColor}" stroke-width="${strokeWidth}" 
-                              opacity="${opacity}" ${dash} />
-                        <circle cx="${lvl.x}%" cy="${lvl.y}%" r="4" fill="${strokeColor}" opacity="${opacity}" />
-                    `;
-                }
-            });
+<!-- Modal -->
+<div id="overlay" onclick="closeModal()"></div>
+<div id="modal">
+  <div class="modal-sector" id="modal-sector">SECTOR 00</div>
+  <div class="modal-title" id="modal-title">TARGET NAME</div>
+  <div class="modal-prompt">&gt; INJECT PAYLOAD FLAG:</div>
+  <input type="text" id="flag-input" class="flag-input" placeholder="Forgebots{...}" autocomplete="off" spellcheck="false">
+  <div class="modal-actions">
+    <button class="btn-abort" onclick="closeModal()">ABORT</button>
+    <button class="btn-exec" onclick="submitFlag()">EXECUTE</button>
+  </div>
+  <div class="modal-status" id="modal-status"></div>
+</div>
 
-            svg.innerHTML = svgContent;
-            updateScore();
+<!-- Toast -->
+<div id="toast">✓ NODE COMPROMISED</div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────
+// Positions in % of stage (700w x 1600h)
+const levels = [
+  { id:0, name:"Ghost Signal",    hash:"4ae5dcc18cdc20124d0fa07c8f6ec903c05b88443a873bd55b47ed7d7b38c985", px:25, py:5   },
+  { id:1, name:"The Manifest",    hash:"51c98db42962a7edbeba99e27b638dc672f014340dfd00fcf786c21a9c4dcaaa", px:68, py:16  },
+  { id:2, name:"Default Creds",   hash:"5fde8a7645813eaefc45285db9b0e47af1893f7f30c209bd1f8cb789c695820e", px:78, py:29  },
+  { id:3, name:"Dead Reckoning",  hash:"af4b3a738703b6caadd9b465d969496d3521314ae3694bfae35bbba2fa285821", px:32, py:43  },
+  { id:4, name:"Heartbleed Echo", hash:"1018746363f453f4b7776f8cee5a5f36eb443c7e81d3c06b910f3aec6cee0d4e", px:18, py:57  },
+  { id:5, name:"Phantom Freq",    hash:"9c15e2524118fc2a363a40c24b6dc0ea4e238d29727957409e2577b41b973ec8", px:62, py:70  },
+  { id:6, name:"SSRF Relay",      hash:"0c6eab2aacd42c9aafd508430e249f63120c8ce846d46dd95b7b5f616ba278e6", px:80, py:83  },
+  { id:7, name:"Kill Switch",     hash:"6ce3c67bc236c3b0a10348bedafb038963d3e10c1cace0cb6520c8433e11dd33", px:48, py:95  }
+];
+
+const STAGE_W = 700, STAGE_H = 1600;
+let solvedNodes = JSON.parse(localStorage.getItem('ironBirdProg_v2')) || [];
+let activeNodeId = null;
+let animating = false;
+
+// ─── COORD HELPERS ──────────────────────────────────────
+function px(lvl) { return (lvl.px / 100) * STAGE_W; }
+function py(lvl) { return (lvl.py / 100) * STAGE_H; }
+
+function buildPath(a, b) {
+  const x1=px(a), y1=py(a), x2=px(b), y2=py(b);
+  const my = (y1+y2)/2;
+  const bendX = (x1+x2)/2 + (x2>x1 ? -80 : 80);
+  return `M${x1},${y1} C${x1},${my} ${bendX},${my} ${x2},${y2}`;
+}
+
+// ─── INIT ────────────────────────────────────────────────
+function initMap() {
+  // Remove old nodes
+  document.querySelectorAll('.node-wrap').forEach(e => e.remove());
+
+  const stage   = document.getElementById('map-stage');
+  const segG    = document.getElementById('segments');
+  segG.innerHTML = '';
+
+  // Draw path segments
+  levels.forEach((lvl, i) => {
+    if (i === 0) return;
+    const prev = levels[i-1];
+    const solved = solvedNodes.includes(prev.id);
+    const d = buildPath(prev, lvl);
+
+    if (solved) {
+      // Glow underlay
+      const glow = document.createElementNS("http://www.w3.org/2000/svg","path");
+      glow.setAttribute('d', d);
+      glow.setAttribute('fill','none');
+      glow.setAttribute('stroke','rgba(16,185,129,0.3)');
+      glow.setAttribute('stroke-width','14');
+      glow.setAttribute('stroke-linecap','round');
+      segG.appendChild(glow);
+
+      const line = document.createElementNS("http://www.w3.org/2000/svg","path");
+      line.setAttribute('d', d); line.setAttribute('class','seg-solved');
+      segG.appendChild(line);
+    } else {
+      const line = document.createElementNS("http://www.w3.org/2000/svg","path");
+      line.setAttribute('d', d); line.setAttribute('class','seg-locked');
+      segG.appendChild(line);
+    }
+  });
+
+  // Create nodes
+  levels.forEach(lvl => {
+    const isSolved = solvedNodes.includes(lvl.id);
+    const isActive = !isSolved && (lvl.id === 0 || solvedNodes.includes(lvl.id - 1));
+    const state    = isSolved ? 'solved' : isActive ? 'active' : 'locked';
+
+    const wrap = document.createElement('div');
+    wrap.className = `node-wrap ${state}`;
+    wrap.id = `node-${lvl.id}`;
+    wrap.style.left = lvl.px + '%';
+    wrap.style.top  = lvl.py + '%';
+    wrap.onclick = () => openModal(lvl.id);
+
+    const ring = document.createElement('div');
+    ring.className = `node-ring ${state}`;
+
+    const icon = document.createElement('span');
+    icon.className = 'node-icon';
+    icon.textContent = isSolved ? '✓' : `0${lvl.id}`;
+    ring.appendChild(icon);
+
+    const badge = document.createElement('div');
+    badge.className = 'node-badge';
+    badge.textContent = lvl.id;
+    ring.appendChild(badge);
+
+    const label = document.createElement('div');
+    label.className = `node-label ${state}`;
+    label.textContent = lvl.name.toUpperCase();
+
+    wrap.appendChild(ring);
+    wrap.appendChild(label);
+    stage.appendChild(wrap);
+  });
+
+  updateScore();
+}
+
+// ─── PARTICLE ANIMATION ──────────────────────────────────
+function animateParticle(fromId, toId, callback) {
+  if (animating) { callback(); return; }
+  animating = true;
+
+  const from = levels[fromId], to = levels[toId];
+  const particle = document.getElementById('particle');
+  particle.style.display = '';
+
+  // Build the bezier path points
+  const x1=px(from), y1=py(from), x2=px(to), y2=py(to);
+  const my=(y1+y2)/2, bendX=(x1+x2)/2+(x2>x1?-80:80);
+
+  // Bezier point function
+  function bezier(t) {
+    const cx1=x1, cy1=my, cx2=bendX, cy2=my;
+    const u=1-t;
+    return {
+      x: u*u*u*x1 + 3*u*u*t*cx1 + 3*u*t*t*cx2 + t*t*t*x2,
+      y: u*u*u*y1 + 3*u*u*t*cy1 + 3*u*t*t*cy2 + t*t*t*y2
+    };
+  }
+
+  // Color transitions: blue → green
+  const dur = 900;
+  let start = null;
+
+  function step(ts) {
+    if (!start) start = ts;
+    const p = Math.min((ts - start) / dur, 1);
+    const ease = p < 0.5 ? 2*p*p : -1+(4-2*p)*p;
+
+    const pos = bezier(ease);
+    particle.setAttribute('cx', pos.x);
+    particle.setAttribute('cy', pos.y);
+
+    // Color blend
+    const r = Math.round(37 + (5-37)*ease);
+    const g = Math.round(99 + (150-99)*ease);
+    const b = Math.round(235 + (105-235)*ease);
+    particle.style.fill = `rgb(${r},${g},${b})`;
+    particle.style.filter = `drop-shadow(0 0 8px rgb(${r},${g},${b}))`;
+
+    if (p < 1) {
+      requestAnimationFrame(step);
+    } else {
+      particle.style.display = 'none';
+      animating = false;
+      callback();
+    }
+  }
+
+  const startPos = bezier(0);
+  particle.setAttribute('cx', startPos.x);
+  particle.setAttribute('cy', startPos.y);
+  requestAnimationFrame(step);
+}
+
+// ─── SCORE ───────────────────────────────────────────────
+function updateScore() {
+  document.getElementById('score-pill').textContent =
+    `SYSTEMS COMPROMISED: ${solvedNodes.length} / ${levels.length}`;
+}
+
+// ─── MODAL ───────────────────────────────────────────────
+function openModal(id) {
+  const wrap = document.getElementById(`node-${id}`);
+  if (wrap.classList.contains('locked')) return;
+
+  activeNodeId = id;
+  const lvl = levels[id];
+
+  document.getElementById('modal-sector').textContent = `SECTOR 0${id} // CLASSIFICATION: ALPHA`;
+  document.getElementById('modal-title').textContent = lvl.name.toUpperCase();
+  document.getElementById('flag-input').value = '';
+  document.getElementById('modal-status').innerHTML = '';
+
+  const input = document.getElementById('flag-input');
+  if (solvedNodes.includes(id)) {
+    input.disabled = true;
+    document.getElementById('modal-status').innerHTML = '<span class="ok">&gt; NODE ALREADY COMPROMISED. SYSTEM BREACHED.</span>';
+  } else {
+    input.disabled = false;
+  }
+
+  document.getElementById('overlay').style.display = 'block';
+  const modal = document.getElementById('modal');
+  modal.style.display = 'block';
+  requestAnimationFrame(() => modal.classList.add('open'));
+  if (!input.disabled) input.focus();
+}
+
+function closeModal() {
+  const modal = document.getElementById('modal');
+  modal.classList.remove('open');
+  setTimeout(() => {
+    modal.style.display = 'none';
+    document.getElementById('overlay').style.display = 'none';
+  }, 250);
+  activeNodeId = null;
+}
+
+// ─── SHA256 ───────────────────────────────────────────────
+async function sha256(msg) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// ─── SUBMIT ───────────────────────────────────────────────
+async function submitFlag() {
+  if (activeNodeId === null || solvedNodes.includes(activeNodeId)) return;
+  const input  = document.getElementById('flag-input');
+  const status = document.getElementById('modal-status');
+  const target = levels[activeNodeId].hash;
+  const text   = input.value.trim();
+  if (!text) return;
+
+  status.innerHTML = '<span class="wait">&gt; DECRYPTING PAYLOAD...</span>';
+  const hash = await sha256(text);
+
+  setTimeout(() => {
+    if (hash === target) {
+      status.innerHTML = '<span class="ok">&gt; ACCESS GRANTED. SYSTEM BREACHED.</span>';
+      const justSolvedId = activeNodeId;
+      solvedNodes.push(justSolvedId);
+      localStorage.setItem('ironBirdProg_v2', JSON.stringify(solvedNodes));
+
+      setTimeout(() => {
+        closeModal();
+        // If there's a next node, run particle animation then reinit
+        const nextId = justSolvedId + 1;
+        if (nextId < levels.length) {
+          initMap(); // redraw solved segment immediately
+          animateParticle(justSolvedId, nextId, () => {
+            initMap(); // reinit to pulse next active node
+            showToast(`NODE ${justSolvedId} COMPROMISED`);
+            scrollToNode(nextId);
+          });
+        } else {
+          initMap();
+          showToast('ALL SYSTEMS COMPROMISED!');
         }
+      }, 800);
+    } else {
+      status.innerHTML = '<span class="err">&gt; PAYLOAD REJECTED. INVALID FLAG.</span>';
+      input.style.borderColor = '#ef4444';
+      input.style.boxShadow = '0 0 0 3px rgba(239,68,68,0.2)';
+      setTimeout(() => {
+        status.innerHTML = '';
+        input.style.borderColor = '';
+        input.style.boxShadow = '';
+      }, 2200);
+    }
+  }, 500);
+}
 
-        function updateScore() {
-            const percentage = Math.floor((solvedNodes.length / levels.length) * 100);
-            const scoreEl = document.getElementById('score');
-            
-            // Glitchy count up effect
-            let current = 0;
-            const interval = setInterval(() => {
-                if (current >= percentage) {
-                    scoreEl.innerText = percentage;
-                    clearInterval(interval);
-                } else {
-                    current += Math.ceil((percentage - current) / 4) || 1;
-                    scoreEl.innerText = current;
-                }
-            }, 30);
+// ─── TOAST ────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = '✓ ' + msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
 
-            if(percentage === 100) {
-                setTimeout(() => { scoreEl.style.color = 'var(--solved)'; }, 500);
-            }
-        }
+// ─── SCROLL TO NEXT NODE ─────────────────────────────────
+function scrollToNode(id) {
+  const el = document.getElementById(`node-${id}`);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
 
-        function openModal(id) {
-            const nodeEl = document.getElementById(`node-${id}`);
-            if (nodeEl.classList.contains('locked')) return; 
-            
-            activeNodeId = id;
-            document.getElementById('modal-title').innerText = `TARGET SECTOR // 0${id}: ${levels[id].name.toUpperCase()}`;
-            document.getElementById('flag-input').value = '';
-            document.getElementById('term-status').innerText = '';
-            
-            if (solvedNodes.includes(id)) {
-                document.getElementById('term-status').innerHTML = '<span class="ok">> ROOT PRIVILEGES ALREADY ACQUIRED.</span>';
-                document.getElementById('flag-input').disabled = true;
-            } else {
-                document.getElementById('flag-input').disabled = false;
-            }
+// ─── KEYBOARD ────────────────────────────────────────────
+document.getElementById('flag-input').addEventListener('keypress', e => {
+  if (e.key === 'Enter') submitFlag();
+});
 
-            document.getElementById('modal-overlay').style.display = 'block';
-            document.getElementById('terminal-modal').style.display = 'block';
-            document.getElementById('flag-input').focus();
-        }
+// ─── RESET ────────────────────────────────────────────────
+window.resetMap = function() {
+  localStorage.removeItem('ironBirdProg_v2');
+  solvedNodes = [];
+  initMap();
+  showToast('MAP RESET');
+};
 
-        function closeModal() {
-            document.getElementById('modal-overlay').style.display = 'none';
-            document.getElementById('terminal-modal').style.display = 'none';
-            activeNodeId = null;
-        }
-
-        async function sha256(message) {
-            const msgBuffer = new TextEncoder().encode(message);
-            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        }
-
-        async function submitFlag() {
-            if (activeNodeId === null || solvedNodes.includes(activeNodeId)) return;
-            
-            const input = document.getElementById('flag-input').value.trim();
-            const status = document.getElementById('term-status');
-            const targetHash = levels[activeNodeId].hash;
-            
-            status.innerHTML = '<span class="sys">> DECRYPTING PAYLOAD SIGNATURE...</span>';
-            const inputHash = await sha256(input);
-
-            setTimeout(() => {
-                if (inputHash === targetHash) {
-                    status.innerHTML = '<span class="ok">> ACCESS GRANTED. NODE COMPROMISED.</span>';
-                    solvedNodes.push(activeNodeId);
-                    localStorage.setItem('ironBirdProgress', JSON.stringify(solvedNodes));
-                    
-                    setTimeout(() => {
-                        closeModal();
-                        initMap(); // Redraw map to show unlocked path
-                    }, 1200);
-                } else {
-                    status.innerHTML = '<span class="err">> ACCESS DENIED. KERNEL PANIC.</span>';
-                    setTimeout(() => { status.innerHTML = ''; }, 2000);
-                }
-            }, 600); // Artificial delay for cinematic effect
-        }
-
-        document.getElementById('flag-input').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') submitFlag();
-        });
-
-        // Developer Tool: Type 'resetMap()' in the console to clear progress
-        window.resetMap = function() {
-            localStorage.removeItem('ironBirdProgress');
-            solvedNodes = [];
-            initMap();
-            console.log("Map progress wiped.");
-        }
-
-        window.onload = initMap;
-    </script>
+window.onload = initMap;
+</script>
 </body>
 </html>
