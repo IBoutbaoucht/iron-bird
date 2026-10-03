@@ -52,4 +52,4 @@ Solutions are intentionally not documented in this repository; the tracker at ib
 
 ---
 
-<p align="center"><sub>MIT License · Built by <a href="https://github.com/IBoutbaoucht">Imad Boutbaoucht</a></sub></p>
+<p align="center"><sub>MIT License · <a href="LICENSE">LICENSE</a></sub></p>
